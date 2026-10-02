@@ -1,9 +1,8 @@
-import React from 'react';
-import { AuthProvider } from './context/AuthContext';
-import { Navbar } from './components/Navbar';
-import { LoginModal } from './features/auth/LoginModal';
-import { RegisterModal } from './features/auth/RegisterModal';
 
+import {Navbar} from "./components/layout/Navbar";
+import {LoginModal} from "./components/features/auth/LoginModal";
+import {RegisterModal} from "./components/features/auth/RegisterModal";
+import { AuthProvider } from "./components/context/AuthContext";
 function App() {
   return (
     <AuthProvider>
@@ -15,7 +14,7 @@ function App() {
           <p className="text-gray-400">აირჩიეთ ფილმები, სერიალები და ისიამოვნეთ ყურებით.</p>
         </main>
 
-        {/* გლობალური მოდალები */}
+   
         <LoginModal />
         <RegisterModal />
       </div>
