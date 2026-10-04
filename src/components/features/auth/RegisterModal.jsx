@@ -1,146 +1,192 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-export const RegisterModal = () => {
-  const { isRegisterOpen, setIsRegisterOpen, setIsLoginOpen, register } = useAuth();
+export const RegisterModal = ({ isOpen, onClose }) => {
+  const { register, setIsLoginOpen } = useAuth();
   const [formData, setFormData] = useState({
-    full_name: '',
+    username: '',
     email: '',
     password: '',
-    password_confirmation: '',
+    password_confirmation: ''
   });
   const [avatar, setAvatar] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  if (!isRegisterOpen) return null;
+  if (!isOpen) return null;
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAvatar(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
   };
+
+  // ვალიდაციის პირობები (გალოჩკებისთვის და იქსებისთვის)
+  const isUsernameValid = formData.username.trim().length >= 2;
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+  const isPasswordValid = formData.password.length >= 6;
+  const isConfirmValid = formData.password_confirmation && formData.password === formData.password_confirmation;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.password_confirmation) {
-      setError('Passwords do not match');
+    if (!isConfirmValid) {
+      setError('პაროლები არ ემთხვევა ერთმანეთს');
       return;
     }
-    setError('');
-    setLoading(true);
 
     try {
-      
-      const data = new FormData();
-      data.append('full_name', formData.full_name);
-      data.append('email', formData.email);
-      data.append('password', formData.password);
-      data.append('password_confirmation', formData.password_confirmation);
-      if (avatar) data.append('avatar', avatar);
+      const dataToSend = new FormData();
+      dataToSend.append('username', formData.username);
+      dataToSend.append('email', formData.email);
+      dataToSend.append('password', formData.password);
+      dataToSend.append('password_confirmation', formData.password_confirmation);
+      if (avatar) {
+        dataToSend.append('avatar', avatar);
+      }
 
-      await register(data);
+      await register(dataToSend);
+      onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
-    } finally {
-      setLoading(false);
+      console.error("Registration error:", err.response?.data);
+      setError(err.response?.data?.message || 'რეგისტრაცია ვერ მოხერხდა. სცადეთ თავიდან.');
     }
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md"
-      onClick={() => setIsRegisterOpen(false)}
-    >
-      <div 
-        className="w-full max-w-md bg-[#121212] p-8 rounded-2xl border border-white/10 relative text-white shadow-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md px-4 py-6">
+      <div className="relative w-full max-w-md bg-[#121212] border border-white/10 rounded-2xl p-6 md:p-8 text-white shadow-2xl max-h-[90vh] overflow-y-auto">
         <button 
-          onClick={() => setIsRegisterOpen(false)}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
         >
           ✕
         </button>
 
-        <h2 className="text-2xl font-bold mb-6 text-center">Sign up</h2>
+        <h2 className="text-2xl font-bold mb-1">Sign up</h2>
+        <p className="text-xs text-gray-400 mb-6">Welcome to KinoXII.</p>
 
-        {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-500 text-red-300 rounded text-sm">{error}</div>}
+        {error && <div className="mb-4 p-3 bg-red-600/20 border border-red-500/50 text-red-500 text-xs rounded-lg">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* სურათის ატვირთვა */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Upload avatar (optional)</label>
-            <input 
-              type="file"
-              onChange={(e) => setAvatar(e.target.files[0])}
-              className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-white/10 file:text-white hover:file:bg-white/20 cursor-pointer"
-            />
+            <label className="block text-xs font-medium text-gray-300 mb-1.5">
+              Upload avatar <span className="text-gray-500">(optional)</span>
+            </label>
+            <label className="flex items-center space-x-3 w-full p-3 border-2 border-dashed border-white/10 rounded-xl cursor-pointer bg-[#1a1a1a] hover:border-red-600/50 transition">
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-red-500" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center text-red-500">📷</div>
+              )}
+              <div className="text-left">
+                <p className="text-xs font-medium text-gray-300">JPEG, PNG or WEBP</p>
+                <p className="text-[10px] text-gray-500">ატვირთეთ ფოტო</p>
+              </div>
+              <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+            </label>
           </div>
 
+          {/* Username */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Username / Full Name</label>
-            <input 
-              type="text"
-              name="full_name"
-              value={formData.full_name}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg focus:outline-none focus:border-red-600"
-              placeholder="Nika"
-            />
+            <label className="block text-xs font-medium text-gray-300 mb-1">Username</label>
+            <div className="relative">
+              <input 
+                type="text" 
+                value={formData.username}
+                onChange={(e) => setFormData({...formData, username: e.target.value})}
+                placeholder="User"
+                required
+                className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl text-sm focus:outline-none focus:border-red-600 transition pr-10"
+              />
+              {formData.username && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  {isUsernameValid ? <span className="text-green-500">✓</span> : <span className="text-red-500">✕</span>}
+                </span>
+              )}
+            </div>
           </div>
 
+          {/* Email */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Email</label>
-            <input 
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg focus:outline-none focus:border-red-600"
-              placeholder="example@gmail.com"
-            />
+            <label className="block text-xs font-medium text-gray-300 mb-1">Email</label>
+            <div className="relative">
+              <input 
+                type="email" 
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                placeholder="example@gmail.com"
+                required
+                className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl text-sm focus:outline-none focus:border-red-600 transition pr-10"
+              />
+              {formData.email && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  {isEmailValid ? <span className="text-green-500">✓</span> : <span className="text-red-500">✕</span>}
+                </span>
+              )}
+            </div>
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Password</label>
-            <input 
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg focus:outline-none focus:border-red-600"
-              placeholder="••••••••"
-            />
+            <label className="block text-xs font-medium text-gray-300 mb-1">Password</label>
+            <div className="relative">
+              <input 
+                type="password" 
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                placeholder="••••••••"
+                required
+                className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl text-sm focus:outline-none focus:border-red-600 transition pr-10"
+              />
+              {formData.password && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  {isPasswordValid ? <span className="text-green-500">✓</span> : <span className="text-red-500">✕</span>}
+                </span>
+              )}
+            </div>
           </div>
 
+          {/* Confirm Password */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Confirm Password</label>
-            <input 
-              type="password"
-              name="password_confirmation"
-              value={formData.password_confirmation}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg focus:outline-none focus:border-red-600"
-              placeholder="••••••••"
-            />
+            <label className="block text-xs font-medium text-gray-300 mb-1">Confirm password</label>
+            <div className="relative">
+              <input 
+                type="password" 
+                value={formData.password_confirmation}
+                onChange={(e) => setFormData({...formData, password_confirmation: e.target.value})}
+                placeholder="••••••••"
+                required
+                className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-xl text-sm focus:outline-none focus:border-red-600 transition pr-10"
+              />
+              {formData.password_confirmation && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+                  {isConfirmValid ? <span className="text-green-500">✓</span> : <span className="text-red-500">✕</span>}
+                </span>
+              )}
+            </div>
           </div>
 
           <button 
             type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 transition font-medium rounded-lg disabled:opacity-50 mt-2"
+            className="w-full py-3.5 bg-red-600 hover:bg-red-700 font-bold text-sm rounded-xl shadow-lg shadow-red-600/30 transition mt-2"
           >
-            {loading ? 'Signing up...' : 'Sign up'}
+            Sign up
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-400">
+        <p className="text-center text-xs text-gray-400 mt-6">
           Already have an account?{' '}
           <button 
-            onClick={() => { setIsRegisterOpen(false); setIsLoginOpen(true); }}
-            className="text-red-500 hover:underline font-medium"
+            type="button"
+            onClick={() => {
+              onClose();
+              setIsLoginOpen(true);
+            }}
+            className="text-red-500 font-semibold hover:underline ml-1"
           >
             Log in
           </button>
